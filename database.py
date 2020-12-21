@@ -55,26 +55,33 @@ class ColumnDB(object):
     def __init__(self, name, schema):
         # self.location = os.path.expanduser(PATH + name)
         self.name = name
+        if os.path.exists("./%s" % (name,)):
+            answer = input("Schema exists, overwrite? [Y/n]: ")
+            if answer == 'n':
+                print('Using old schema.')
+                return
         Path("./%s" % (name,)).mkdir(parents=True, exist_ok=True)
         for row in schema:
             with open('./%s/%s.txt' % (self.name, row,), 'w') as f:
                 f.write("")
+        print('New schema created.')
 
     def save(self, key, value):
         path = './%s/%s.txt' % (self.name, key,)
         if os.path.exists(path):
-            with open(path, 'w') as f:
-                f.write(key + ',')
-            return True
+            with open(path, 'a') as f:
+                f.write(value + ',')
+            return print('Added value to %s' % key)
         else:
-            return False
+            return print('Key does not exists')
 
     def get(self, key):
         path = './%s/%s.txt' % (self.name, key,)
         if os.path.exists(path):
             with open(path, 'r') as f:
                 column_values = f.read()
-                print(column_values)
-            return True
+                self.current = column_values.split(',')[0:-1]
+                print(self.current)
+            return
         else:
-            return False
+            return print('Key does not exists')
