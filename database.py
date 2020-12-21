@@ -63,11 +63,11 @@ class ColumnDB(object):
             if answer == 'n':
                 with open('./meta/%s.txt' % (name,), 'r') as f:
                     schema_values = f.read()
-                    self.schema = schema_values.split(',')[0:-1]
+                    self.schema = schema_values.split(',')
                 for key in self.schema:
                     with open('./%s/%s.txt' % (self.name, key,), 'r') as f:
                         column_values = f.read()
-                        values = column_values.split(',')[0:-1]
+                        values = column_values.split(',')
                         self.length = len(values)
                         self.data[key] = values
                 print('Using old database.')
