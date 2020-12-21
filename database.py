@@ -56,6 +56,7 @@ class ColumnDB(object):
         self.name = name
         self.data = {}
         self.row_data = None
+        self.length = 0
 
         if os.path.exists("./%s" % (name,)):
             answer = input("Database exists, overwrite? [Y/n]: ")
@@ -87,7 +88,7 @@ class ColumnDB(object):
                 with open('./%s/%s.txt' % (self.name, key,), 'w') as f:
                     f.write("")
                 self.data[key] = []
-            print('New schema created.')
+            print('New database created.')
             return
 
     def add(self, values):
@@ -115,10 +116,10 @@ class ColumnDB(object):
 
     def get(self, id=None):
         if self.row_data != None:
-            if id != None and id <= self.length:
+            if id != None and id <= self.length - 1:
                 return self.row_data[id]
 
-        if id != None and id < self.length:
+        if id != None and id < self.length - 1:
             row = []
             for key in self.schema:
                 row.append(self.data[key][id])
@@ -133,3 +134,11 @@ class ColumnDB(object):
             self.row_data = data
             print("This is the data:")
             return data
+
+    def save(self):
+        Path("./%s" % (self.name,)).mkdir(parents=True, exist_ok=True)
+        for key in self.schema:
+            with open('./%s/%s.txt' % (self.name, key,), 'w') as f:
+                f.write(','.join(self.data[key]))
+        print('Saved')
+        return
