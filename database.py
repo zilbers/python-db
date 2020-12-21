@@ -52,36 +52,84 @@ class JsonDB(object):
 
 
 class ColumnDB(object):
-    def __init__(self, name, schema):
-        # self.location = os.path.expanduser(PATH + name)
+    def __init__(self, name, schema=[]):
         self.name = name
+        self.data = {}
+        self.row_data = None
+
         if os.path.exists("./%s" % (name,)):
-            answer = input("Schema exists, overwrite? [Y/n]: ")
+            answer = input("Database exists, overwrite? [Y/n]: ")
             if answer == 'n':
-                print('Using old schema.')
+                with open('./meta/%s.txt' % (name,), 'r') as f:
+                    schema_values = f.read()
+                    self.schema = schema_values.split(',')[0:-1]
+                for key in self.schema:
+                    with open('./%s/%s.txt' % (self.name, key,), 'r') as f:
+                        column_values = f.read()
+                        values = column_values.split(',')[0:-1]
+                        self.length = len(values)
+                        self.data[key] = values
+                print('Using old database.')
                 return
-        Path("./%s" % (name,)).mkdir(parents=True, exist_ok=True)
-        for row in schema:
-            with open('./%s/%s.txt' % (self.name, row,), 'w') as f:
-                f.write("")
-        print('New schema created.')
 
-    def save(self, key, value):
-        path = './%s/%s.txt' % (self.name, key,)
-        if os.path.exists(path):
-            with open(path, 'a') as f:
-                f.write(value + ',')
-            return print('Added value to %s' % key)
-        else:
-            return print('Key does not exists')
-
-    def get(self, key):
-        path = './%s/%s.txt' % (self.name, key,)
-        if os.path.exists(path):
-            with open(path, 'r') as f:
-                column_values = f.read()
-                self.current = column_values.split(',')[0:-1]
-                print(self.current)
+        if len(schema) == 0:
+            print('Not a valid schema.')
             return
         else:
-            return print('Key does not exists')
+            self.schema = schema
+            if not os.path.exists("./meta"):
+                Path("./meta").mkdir(parents=True, exist_ok=True)
+            with open('./meta/%s.txt' % (self.name,), 'w') as f:
+                f.write(','.join(schema))
+
+            Path("./%s" % (self.name,)).mkdir(parents=True, exist_ok=True)
+            for key in schema:
+                with open('./%s/%s.txt' % (self.name, key,), 'w') as f:
+                    f.write("")
+                self.data[key] = []
+            print('New schema created.')
+            return
+
+    def add(self, values):
+        if len(self.schema) != len(values):
+            print('Wrong values, this is the schema:')
+            return self.schema
+
+        for index in range(len(self.schema)):
+            self.data[self.schema[index]].append(values[index])
+        self.length += 1
+        print('Added this values:')
+        return values
+
+    def get_column(self, key, id=None):
+        if key in self.data:
+            if id != None:
+                if id <= len(self.data[key]):
+                    return self.data[key][id]
+                else:
+                    print('id does not exists, largest id is: %s' %
+                          len(self.data[key]))
+            return self.data[key]
+        else:
+            return print('Key does not exists.')
+
+    def get(self, id=None):
+        if self.row_data != None:
+            if id != None and id <= self.length:
+                return self.row_data[id]
+
+        if id != None and id < self.length:
+            row = []
+            for key in self.schema:
+                row.append(self.data[key][id])
+            return row
+        else:
+            data = []
+            for index in range(self.length):
+                row = {}
+                for key in self.schema:
+                    row[key] = self.data[key][index]
+                data.append(row)
+            self.row_data = data
+            print("This is the data:")
+            return data
