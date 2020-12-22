@@ -62,9 +62,6 @@ class ColumnDB(object):
         if os.path.exists("./%s" % (name,)):
             answer = input("Database exists, overwrite? [Y/n]: ")
             if answer == 'n':
-                # with open('./meta/%s.txt' % (name,), 'r') as f:
-                #     schema_values = f.read()
-                #     self.schema = schema_values.split(',')
                 with open('./meta/%s.txt' % (name,)) as f:
                     self.schema = json.load(f)
                 for key in self.schema:
@@ -136,14 +133,14 @@ class ColumnDB(object):
         if id != None and id < self.length - 1:
             row = []
             for key in self.schema:
-                row.append(self.data[key][id])
+                row.append(self.data[key['key']][id])
             return row
         else:
             data = []
             for index in range(self.length):
                 row = {}
                 for key in self.schema:
-                    row[key] = self.data[key][index]
+                    row[key['key']] = self.data[key['key']][index]
                 data.append(row)
             self.row_data = data
             print("This is the data:")
@@ -152,9 +149,10 @@ class ColumnDB(object):
     def save(self):
         Path("./%s" % (self.name,)).mkdir(parents=True, exist_ok=True)
         for key in self.schema:
-            with open('./%s/%s.txt' % (self.name, key,), 'w') as f:
-                f.write(','.join(self.data[key]))
-        print('Saved')
+            with open('./%s/%s.txt' % (self.name, key['key'],), 'w', encoding='utf-8') as f:
+                json.dump(self.data[key['key']], f,
+                          ensure_ascii=False, indent=4)
+        print('Saved database values.')
         return
 
     def count(self, key, value):
