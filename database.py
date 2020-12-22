@@ -1,4 +1,5 @@
 import json
+from json.decoder import JSONDecodeError
 from pathlib import Path
 import os
 
@@ -61,15 +62,21 @@ class ColumnDB(object):
         if os.path.exists("./%s" % (name,)):
             answer = input("Database exists, overwrite? [Y/n]: ")
             if answer == 'n':
-                with open('./meta/%s.txt' % (name,), 'r') as f:
-                    schema_values = f.read()
-                    self.schema = schema_values.split(',')
+                # with open('./meta/%s.txt' % (name,), 'r') as f:
+                #     schema_values = f.read()
+                #     self.schema = schema_values.split(',')
+                with open('./meta/%s.txt' % (name,)) as f:
+                    self.schema = json.load(f)
                 for key in self.schema:
-                    with open('./%s/%s.txt' % (self.name, key,), 'r') as f:
-                        column_values = f.read()
-                        values = column_values.split(',')
-                        self.length = len(values)
-                        self.data[key] = values
+                    with open('./%s/%s.txt' % (self.name, key['key'],), 'r') as f:
+                        try:
+                            column_values = json.load(f)
+                            self.length = len(column_values)
+                            self.data[key['key']] = column_values
+                        except JSONDecodeError:
+                            self.length = 0
+                            self.data[key['key']] = []
+
                 print('Using old database.')
                 return
 
@@ -80,14 +87,15 @@ class ColumnDB(object):
             self.schema = schema
             if not os.path.exists("./meta"):
                 Path("./meta").mkdir(parents=True, exist_ok=True)
-            with open('./meta/%s.txt' % (self.name,), 'w') as f:
-                f.write(','.join(schema))
+
+            with open('./meta/%s.txt' % (self.name,), 'w', encoding='utf-8') as f:
+                json.dump(schema, f, ensure_ascii=False, indent=4)
 
             Path("./%s" % (self.name,)).mkdir(parents=True, exist_ok=True)
             for key in schema:
-                with open('./%s/%s.txt' % (self.name, key,), 'w') as f:
+                with open('./%s/%s.txt' % (self.name, key['key'],), 'w') as f:
                     f.write("")
-                self.data[key] = []
+                self.data[key['key']] = []
             print('New database created.')
             return
 
@@ -97,7 +105,13 @@ class ColumnDB(object):
             return self.schema
 
         for index in range(len(self.schema)):
-            self.data[self.schema[index]].append(values[index])
+            schema_row = self.schema[index]
+            value = values[index]
+            if self._type(schema_row['type'], value):
+                self.data[schema_row['key']].append(value)
+            else:
+                print('Wrong values, this is the schema:')
+                return self.schema
         self.length += 1
         print('Added this values:')
         return values
@@ -142,3 +156,14 @@ class ColumnDB(object):
                 f.write(','.join(self.data[key]))
         print('Saved')
         return
+
+    def count(self, key, value):
+        return self.data[key].count(value)
+
+    def _type(self, schema_type, value):
+        if schema_type == 'str' or schema_type == 'string':
+            return type(value) is str
+        if schema_type == 'int' or schema_type == 'integer':
+            return type(value) is int
+        else:
+            return False
