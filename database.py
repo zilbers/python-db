@@ -6,7 +6,7 @@ import os
 PATH = "~\\Documents\\GitHub\\python-db\\"
 
 
-class JsonDB(object):
+class Json(object):
     def __init__(self, location):
         self.location = os.path.expanduser(location)
         self.load(self.location)
@@ -52,7 +52,7 @@ class JsonDB(object):
         return True
 
 
-class ColumnDB(object):
+class Column(object):
     def __init__(self, name, schema=[]):
         self.name = name
         self.data = {}
@@ -73,13 +73,12 @@ class ColumnDB(object):
                         except JSONDecodeError:
                             self.length = 0
                             self.data[key['key']] = []
-
                 print('Using old database.')
                 return
-
         if len(schema) == 0:
             print('Not a valid schema.')
             return
+
         else:
             self.schema = schema
             if not os.path.exists("./meta"):
@@ -165,3 +164,67 @@ class ColumnDB(object):
             return type(value) is int
         else:
             return False
+
+
+class Binary(object):
+    def __init__(self, name, schema=[]):
+        self.name = name
+        self.data = {}
+        self.length = 0
+        # Schema: block - 255
+        # Input: int
+        # Index: Json, key - value, value - array of locations in file (id) * 255
+        if os.path.exists("./%s" % (name,)):
+            answer = input("Database exists, overwrite? [Y/n]: ")
+            if answer == 'n':
+                with open('./meta/%s.txt' % (name,)) as f:
+                    self.schema = json.load(f)
+                print('Using old database.')
+                return
+        if len(schema) == 0:
+            print('Not a valid schema.')
+            return
+
+        self.schema = schema
+        if not os.path.exists("./meta"):
+            Path("./meta").mkdir(parents=True, exist_ok=True)
+
+        with open('./meta/%s.txt' % (self.name,), 'w', encoding='utf-8') as f:
+            json.dump(schema, f, ensure_ascii=False, indent=4)
+
+        Path("./%s" % (self.name,)).mkdir(parents=True, exist_ok=True)
+        for key in schema:
+            with open('./%s/%s.txt' % (self.name, key['key'],), 'w') as f:
+                f.write("")
+            self.data[key['key']] = []
+        print('New database created.')
+        return
+
+    def add(self, values):
+        for index in range(len(values)):
+            if isinstance(values[index], int) and values[index] <= 255:
+                with open('./%s/%s.txt' % (self.name, self.schema[index]['key'],), 'a') as f:
+                    f.write(f'{values[index]:08b}')
+                self._index(values[index], self.length)
+                self.length += 1
+                message = 'Added values.'
+            else:
+                message = 'POC supports only 8bit int.'
+        return print(message)
+
+    def _index(self, key, location):
+        path = './meta/%s/index/%s.txt' % (self.name, key)
+
+        if not os.path.exists("./meta/%s" % (self.name)):
+            Path("./meta/%s" % (self.name)).mkdir(parents=True, exist_ok=True)
+
+        if not os.path.exists("./meta/%s/index" % (self.name)):
+            Path("./meta/%s/index" % (self.name)
+                 ).mkdir(parents=True, exist_ok=True)
+
+        if os.path.exists(path):
+            append_write = 'a'
+        else:
+            append_write = 'w'
+        with open(path, append_write) as f:
+            f.write(f'{location:08b}')
